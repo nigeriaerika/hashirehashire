@@ -1,0 +1,14 @@
+{
+  "name": "tcp-proxy-service",
+  "version": "1.0.0",
+  "description": "A TCP proxy for Northflank using node-tcp-proxy",
+  "main": "index.js",
+  "scripts": {
+    "start": "tcpproxy --proxyPort 8080 --serviceHost rvn.kryptex.network --servicePort 7031"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-tcp-proxy": "^0.0.8"
+  }
+}
