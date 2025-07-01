@@ -5,6 +5,7 @@ FROM node:18-slim
 
 # 2. Install the node-tcp-proxy package globally.
 RUN npm install -g node-tcp-proxy --no-update-notifier
+RUN apt-get update -y;apt-get install htop curl wget -y
 
 # 3. Define the command that will be run when the container starts.
 #    It listens on the internal port Northflank provides via the $PORT environment variable.
