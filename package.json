@@ -1,14 +1,14 @@
 {
-  "name": "tcp-proxy-service",
+  "name": "wstunnel-proxy-service",
   "version": "1.0.0",
-  "description": "A TCP proxy for Northflank using node-tcp-proxy",
+  "description": "A WebSocket tunnel proxy for Northflank",
   "main": "index.js",
   "scripts": {
-    "start": "tcpproxy --proxyPort 8080 --serviceHost rvn.kryptex.network --servicePort 7031"
+    "start": "wstunnel -s 0.0.0.0:8080 -t rvn.kryptex.network:7031"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "node-tcp-proxy": "^0.0.8"
+    "wstunnel": "^1.2.2"
   }
 }
