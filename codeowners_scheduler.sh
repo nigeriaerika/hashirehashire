@@ -65,36 +65,41 @@ get_mining_mode() {
         return 2
     fi
 
-    # --- 2. Weekday Stop Mode Check (Mon-Fri 08:00 PHT to 18:30 PHT) ---
-    is_weekday=0
-    if [[ $DAY_OF_WEEK -ge 1 ]] && [[ $DAY_OF_WEEK -le 5 ]]; then is_weekday=1; fi
+    # --- 2. Weekday/Saturday Stop Mode Check (Mon-Sat 08:00 PHT to 18:30 PHT) ---
+    # Day is Mon (1) through Sat (6)
+    is_mon_to_sat=0
+    if [[ $DAY_OF_WEEK -ge 1 ]] && [[ $DAY_OF_WEEK -le 6 ]]; then is_mon_to_sat=1; fi
+    
+    # Time is between 08:00 and 18:30
     is_stop_time=0
     if (( $CURRENT_T >= $STOP_T )) && (( $CURRENT_T < $START_T )); then is_stop_time=1; fi
     
-    if [[ $is_weekday -eq 1 ]] && [[ $is_stop_time -eq 1 ]]; then
+    if [[ $is_mon_to_sat -eq 1 ]] && [[ $is_stop_time -eq 1 ]]; then
         echo "STOPPED_MODE"
         return 0
     fi
 
-    # --- 3. Regular Mining Mode Check (Mon-Fri 18:30 PHT to 08:00 PHT) ---
-    if [[ $is_weekday -eq 1 ]]; then
-        echo "REGULAR_MINING_MODE"
-        return 1
-    fi
-
-    # Fallback 
-    echo "STATUS_UNKNOWN"
-    return -1
+    # --- 3. Regular Mining Mode (All remaining active periods) ---
+    # This covers:
+    # A) Mon-Fri night mining (18:30 to 08:00 the next day)
+    # B) Fri night through Saturday morning (Fri 18:30 up to Sat 08:00)
+    # C) Sat morning (08:00) until Sat evening stop (18:30) -- Wait, Sat is now covered by STOPPED mode 
+    
+    # Since we have explicitly excluded the stopped periods, and the special weekend period,
+    # anything remaining must be an active mining period (Regular Mining).
+    # This covers Mon-Fri night time, and early Sat morning before 8am.
+    
+    # The only time left unaccounted for is when the miner is supposed to be running.
+    echo "REGULAR_MINING_MODE"
+    return 1
 }
 
 # Function to start the Regular miner process
 start_regular_miner() {
-    # CRITICAL: Ensure the special miner is dead before checking the regular one
     stop_miner_by_name "$SPECIAL_WORKER_NAME"
     
     if ! pgrep -f "$WORKER_NAME"; then
         echo "[$(TZ="$TZ_NAME" date)] Starting regular miner ($WORKER_NAME)..."
-        # Start the miner in the background
         ( exec $MINER_CMD ) &
     else
         echo "[$(TZ="$TZ_NAME" date)] Regular miner ($WORKER_NAME) already running."
@@ -103,12 +108,10 @@ start_regular_miner() {
 
 # Function to start the Special miner process
 start_special_miner() {
-    # CRITICAL: Ensure the regular miner is dead before checking the special one
     stop_miner_by_name "$WORKER_NAME"
 
     if ! pgrep -f "$SPECIAL_WORKER_NAME"; then
         echo "[$(TZ="$TZ_NAME" date)] Starting special weekend miner ($SPECIAL_WORKER_NAME)..."
-        # Execute the special script in the background
         ( exec $SPECIAL_MINER_CMD ) &
     else
         echo "[$(TZ="$TZ_NAME" date)] Special miner ($SPECIAL_WORKER_NAME) already running."
@@ -117,9 +120,10 @@ start_special_miner() {
 
 # --- Main Monitoring Loop ---
 
-echo "--- LolMiner Scheduled Monitor v2.2 Initializing (PHT Timezone) ---"
+echo "--- LolMiner Scheduled Monitor v2.3 Initializing (PHT Timezone) ---"
 echo "--- Current PHT Time: $(TZ="$TZ_NAME" date) ---"
-echo "--- Regular Mining: Mon-Fri 6:30 PM to 8:00 AM ---"
+echo "--- Regular Mining: All active periods outside of special/stopped rules. ---"
+echo "--- Stopped: Mon-Sat 8:00 AM to 6:30 PM ---"
 echo "--- Special Mode: Sat 6:30 PM to Mon 8:00 AM ---"
 
 while true; do
@@ -129,25 +133,21 @@ while true; do
 
     if [[ "$MODE" == "REGULAR_MINING_MODE" ]]; then
         start_regular_miner
-        # Check every 5 seconds for stability
         sleep 5
         
     elif [[ "$MODE" == "SPECIAL_WEEKEND_MODE" ]]; then
         start_special_miner
-        # Check every 5 seconds for stability
         sleep 5
 
     elif [[ "$MODE" == "STOPPED_MODE" ]]; then
-        # Ensure BOTH processes are killed during downtime
         stop_miner_by_name "$WORKER_NAME"
         stop_miner_by_name "$SPECIAL_WORKER_NAME"
         
-        # Long sleep during downtime
         echo "[$(TZ="$TZ_NAME" date)] Miner is paused for downtime. Checking again in 5 minutes..."
         sleep 300 # Wait 5 minutes
         
     else
-        echo "[$(TZ="$TZ_NAME" date)] ERROR: Unknown mode. Re-checking in 1 minute."
+        echo "[$(TZ="$TZ_NAME" date)] ERROR: Unknown mode encountered ($MODE). Re-checking in 1 minute."
         sleep 60
     fi
 done
